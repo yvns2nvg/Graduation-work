@@ -1,0 +1,292 @@
+"""신발 생성 API 라우터 - 이미지 생성, 3D 변환, 상태 조회, 이력 관리"""
+
+import logging
+from datetime import datetime
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy import select, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db, async_session
+from app.middleware.auth import get_current_user
+from app.models.user import User
+from app.models.generation import Generation
+from app.schemas.generation import (
+    GenerateRequest,
+    GenerationResponse,
+    GenerationStatusResponse,
+    GenerationListResponse,
+)
+from app.services import llm_service, trellis_service, storage_service
+
+router = APIRouter(prefix="/api/shoes", tags=["신발 생성"])
+logger = logging.getLogger(__name__)
+
+
+# ===== 백그라운드 작업 함수 =====
+
+async def _background_generate_image(generation_id: int, prompt: str):
+    """백그라운드에서 LLM 서버로 이미지 생성 요청"""
+    async with async_session() as db:
+        try:
+            # 1) 상태를 'generating'으로 변경
+            gen = await db.get(Generation, generation_id)
+            if not gen:
+                return
+            gen.status = "generating"
+            gen.updated_at = datetime.utcnow()
+            await db.commit()
+
+            # 2) LLM 서버에 이미지 생성 요청
+            result = await llm_service.request_image_generation(prompt)
+
+            if result["success"] and result["image_data"]:
+                # 이미지 바이너리 데이터인 경우 로컬에 저장
+                if isinstance(result["image_data"], bytes):
+                    image_path = storage_service.save_image(result["image_data"])
+                else:
+                    # JSON 응답인 경우 (URL 등)
+                    image_path = str(result["image_data"])
+
+                gen.image_url = image_path
+                gen.status = "image_done"
+            else:
+                gen.status = "failed"
+                logger.error(f"이미지 생성 실패 (ID: {generation_id}): {result['error']}")
+
+            gen.updated_at = datetime.utcnow()
+            await db.commit()
+
+        except Exception as e:
+            logger.error(f"백그라운드 이미지 생성 오류 (ID: {generation_id}): {e}")
+            gen = await db.get(Generation, generation_id)
+            if gen:
+                gen.status = "failed"
+                gen.updated_at = datetime.utcnow()
+                await db.commit()
+
+
+async def _background_convert_3d(generation_id: int, image_path: str):
+    """백그라운드에서 TRELLIS 서버로 3D 변환 요청"""
+    async with async_session() as db:
+        try:
+            # 1) 상태를 'converting'으로 변경
+            gen = await db.get(Generation, generation_id)
+            if not gen:
+                return
+            gen.status = "converting"
+            gen.updated_at = datetime.utcnow()
+            await db.commit()
+
+            # 2) TRELLIS 서버에 3D 변환 요청
+            abs_image_path = str(storage_service.get_file_path(image_path))
+            result = await trellis_service.request_3d_conversion(abs_image_path)
+
+            if result["success"] and result["model_data"]:
+                if isinstance(result["model_data"], bytes):
+                    model_path = storage_service.save_3d_model(
+                        result["model_data"],
+                        extension=result.get("file_extension", ".glb"),
+                    )
+                else:
+                    model_path = str(result["model_data"])
+
+                gen.model_3d_url = model_path
+                gen.status = "done"
+            else:
+                gen.status = "failed"
+                logger.error(f"3D 변환 실패 (ID: {generation_id}): {result['error']}")
+
+            gen.updated_at = datetime.utcnow()
+            await db.commit()
+
+        except Exception as e:
+            logger.error(f"백그라운드 3D 변환 오류 (ID: {generation_id}): {e}")
+            gen = await db.get(Generation, generation_id)
+            if gen:
+                gen.status = "failed"
+                gen.updated_at = datetime.utcnow()
+                await db.commit()
+
+
+# ===== API 엔드포인트 =====
+
+@router.post("/generate", response_model=GenerationResponse, status_code=status.HTTP_202_ACCEPTED)
+async def generate_image(
+    body: GenerateRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """텍스트 기반 신발 이미지 생성 요청
+
+    - 작업을 DB에 등록하고 즉시 응답 (202 Accepted)
+    - 실제 이미지 생성은 백그라운드에서 비동기 처리
+    - 상태는 `/api/shoes/{id}/status`로 조회
+    """
+    # DB에 새 작업 등록
+    generation = Generation(
+        user_id=current_user.id,
+        prompt_text=body.prompt_text,
+        status="pending",
+    )
+    db.add(generation)
+    await db.commit()
+    await db.refresh(generation)
+
+    # 백그라운드에서 이미지 생성 실행
+    background_tasks.add_task(_background_generate_image, generation.id, body.prompt_text)
+
+    return generation
+
+
+@router.get("/{generation_id}/status", response_model=GenerationStatusResponse)
+async def get_status(
+    generation_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """생성 작업 상태 조회"""
+    gen = await db.get(Generation, generation_id)
+
+    if not gen or gen.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업을 찾을 수 없습니다")
+
+    return gen
+
+
+@router.get("/{generation_id}/image")
+async def get_image(
+    generation_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """생성된 이미지 조회"""
+    from fastapi.responses import FileResponse
+
+    gen = await db.get(Generation, generation_id)
+    if not gen or gen.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업을 찾을 수 없습니다")
+
+    if not gen.image_url:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="이미지가 아직 생성되지 않았습니다")
+
+    file_path = storage_service.get_file_path(gen.image_url)
+    if not file_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="이미지 파일을 찾을 수 없습니다")
+
+    return FileResponse(str(file_path), media_type="image/png")
+
+
+@router.post("/{generation_id}/convert-3d", response_model=GenerationStatusResponse, status_code=status.HTTP_202_ACCEPTED)
+async def convert_to_3d(
+    generation_id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """3D 모델 변환 요청
+
+    - 이미지가 생성 완료된(image_done) 상태에서만 요청 가능
+    - 실제 3D 변환은 백그라운드에서 비동기 처리
+    """
+    gen = await db.get(Generation, generation_id)
+    if not gen or gen.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업을 찾을 수 없습니다")
+
+    if gen.status != "image_done":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"3D 변환은 이미지 생성이 완료된 후에만 가능합니다 (현재 상태: {gen.status})",
+        )
+
+    # 백그라운드에서 3D 변환 실행
+    background_tasks.add_task(_background_convert_3d, gen.id, gen.image_url)
+
+    return gen
+
+
+@router.get("/{generation_id}/3d-status", response_model=GenerationStatusResponse)
+async def get_3d_status(
+    generation_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """3D 변환 상태 조회"""
+    gen = await db.get(Generation, generation_id)
+    if not gen or gen.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업을 찾을 수 없습니다")
+
+    return gen
+
+
+@router.get("/{generation_id}/3d-model")
+async def get_3d_model(
+    generation_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """3D 모델 파일 조회"""
+    from fastapi.responses import FileResponse
+
+    gen = await db.get(Generation, generation_id)
+    if not gen or gen.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업을 찾을 수 없습니다")
+
+    if not gen.model_3d_url:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="3D 모델이 아직 생성되지 않았습니다")
+
+    file_path = storage_service.get_file_path(gen.model_3d_url)
+    if not file_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="3D 모델 파일을 찾을 수 없습니다")
+
+    # 파일 확장자에 따라 적절한 media_type 설정
+    if str(file_path).endswith(".glb"):
+        media_type = "model/gltf-binary"
+    elif str(file_path).endswith(".ply"):
+        media_type = "application/octet-stream"
+    else:
+        media_type = "application/octet-stream"
+
+    return FileResponse(str(file_path), media_type=media_type)
+
+
+@router.get("/history", response_model=GenerationListResponse)
+async def get_history(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """내 생성 이력 조회 (최신순)"""
+    result = await db.execute(
+        select(Generation)
+        .where(Generation.user_id == current_user.id)
+        .order_by(desc(Generation.created_at))
+    )
+    generations = result.scalars().all()
+
+    return GenerationListResponse(
+        total=len(generations),
+        items=generations,
+    )
+
+
+@router.delete("/{generation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_generation(
+    generation_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """생성물 삭제 (DB 레코드 + 관련 파일)"""
+    gen = await db.get(Generation, generation_id)
+    if not gen or gen.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업을 찾을 수 없습니다")
+
+    # 관련 파일 삭제
+    if gen.image_url:
+        storage_service.delete_file(gen.image_url)
+    if gen.model_3d_url:
+        storage_service.delete_file(gen.model_3d_url)
+
+    # DB 레코드 삭제
+    await db.delete(gen)
+    await db.commit()

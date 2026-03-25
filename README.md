@@ -9,7 +9,7 @@
 | 항목 | 내용 |
 |------|------|
 | **목표** | 텍스트 → 신발 이미지 → 3D 모델 생성 → 웹 시각화 & 다운로드 |
-| **핵심 기술** | Text-to-Image (LLM), Gaussian Splatting, 3D Viewer |
+| **핵심 기술** | Text-to-Image (로컬 LLM), Gaussian Splatting (TRELLIS), 3D Viewer (Three.js) |
 | **플랫폼** | 웹 기반 (PC/모바일 대응) |
 
 ---
@@ -55,10 +55,13 @@
                             │          │           │
               ┌─────────────▼──┐  ┌────▼────────┐  ┌▼─────────────────┐
               │   Database     │  │  LLM 서버   │  │  3D 변환 서버      │
-              │  (사용자 정보,  │  │  (AI팀 담당) │  │  (Gaussian        │
-              │   생성 이력,   │  │  Text→Image │  │   Splatting)      │
-              │   파일 메타)   │  └─────────────┘  └───────────────────┘
-              └────────────────┘
+              │  (사용자 정보,  │  │  (AI팀 담당) │  │  (TRELLIS -       │
+              │   생성 이력,   │  │  로컬 모델   │  │   Gaussian        │
+              │   파일 메타)   │  │  Linux Cloud│  │   Splatting)      │
+              │               │  │  GPU 서버   │  │  Linux Cloud      │
+              │               │  │  OpenAI API │  │  GPU 서버          │
+              │               │  │  호환 규격   │  │                   │
+              └────────────────┘  └─────────────┘  └───────────────────┘
 ```
 
 ---
@@ -67,10 +70,10 @@
 
 | 담당 | 역할 | 주요 산출물 |
 |------|------|------------|
-| **Backend (나)** | API 서버, DB, 중간 경로 전체 | API 서버, DB 스키마, 파일 관리 |
-| **AI/LLM 팀** | 텍스트→신발 이미지 생성 모델 | 이미지 생성 API/모델 |
-| **3D 팀** | 가우시안 스플래팅 3D 변환 | 3D 변환 파이프라인 |
-| **Frontend 팀** | 웹 UI, 3D 뷰어 | 프론트엔드 애플리케이션 |
+| **Backend (나)** | FastAPI 서버, DB, 중간 경로 전체 | API 서버, DB 스키마, 파일 관리 |
+| **AI/LLM 팀** | 텍스트→신발 이미지 생성 (로컬 LLM, Linux Cloud GPU) | 이미지 생성 API (OpenAI API 호환 규격) |
+| **3D 팀** | TRELLIS 가우시안 스플래팅 3D 변환 (Linux Cloud GPU) | 3D 변환 파이프라인 |
+| **Frontend 팀** | 웹 UI, 3D 뷰어 (Three.js) | 프론트엔드 애플리케이션 |
 
 ---
 
@@ -154,7 +157,7 @@ Backend/
 │   ├── services/             # 비즈니스 로직
 │   │   ├── auth_service.py
 │   │   ├── llm_service.py    # LLM 서버 통신
-│   │   ├── 3d_service.py     # 3D 변환 서버 통신
+│   │   ├── trellis_service.py # TRELLIS 3D 변환 서버 통신
 │   │   └── storage_service.py
 │   ├── middleware/            # 미들웨어
 │   │   └── auth.py
