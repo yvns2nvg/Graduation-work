@@ -6,7 +6,7 @@ uvicorn[standard]==0.34.*
 sqlalchemy==2.0.*
 aiosqlite==0.20.*      # SQLite 비동기 드라이버 (로컬 개발용)
 greenlet==3.3.*        # 비동기 SQLAlchemy 필수 의존성
-# asyncpg==0.30.*      # PostgreSQL 비동기 드라이버 (배포 시 활성화)
+asyncpg==0.30.*        # PostgreSQL 비동기 드라이버 (Cloud Run 배포용)
 # alembic==1.14.*      # DB 마이그레이션 (추후 필요 시 활성화)
 
 # Authentication
@@ -16,8 +16,8 @@ bcrypt==5.0.*
 # HTTP Client (외부 서버 통신)
 httpx==0.28.*
 
-# File Storage (S3 사용 시)
-# boto3==1.36.*
+# Google Cloud Storage (Cloud Run 파일 저장)
+google-cloud-storage==2.19.*
 
 # Utilities
 python-dotenv==1.0.*

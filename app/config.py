@@ -1,5 +1,6 @@
 """환경 설정 관리 모듈"""
 
+from typing import Optional
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -8,6 +9,8 @@ class Settings(BaseSettings):
     """애플리케이션 환경 설정"""
 
     # ----- Database -----
+    # 로컬: sqlite+aiosqlite:///./shoe_platform.db
+    # Cloud Run: postgresql+asyncpg://user:pass@host:5432/dbname
     DATABASE_URL: str = "sqlite+aiosqlite:///./shoe_platform.db"
 
     # ----- JWT -----
@@ -24,11 +27,23 @@ class Settings(BaseSettings):
     TRELLIS_REQUEST_TIMEOUT: int = 300
 
     # ----- File Storage -----
+    # 로컬 개발: 로컬 폴더 사용 (STORAGE_PATH)
+    # Cloud Run: GCS 버킷 사용 (GCS_BUCKET_NAME 설정 시 자동 전환)
     STORAGE_PATH: str = "./storage"
+    GCS_BUCKET_NAME: Optional[str] = None  # 설정하면 GCS 모드로 전환
+
+    # ----- Cloud Run 환경 판별 -----
+    # Cloud Run은 자동으로 PORT 환경변수를 주입함
+    PORT: int = 8000
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+
+    @property
+    def is_cloud_storage(self) -> bool:
+        """GCS 버킷이 설정되어 있으면 클라우드 스토리지 모드"""
+        return self.GCS_BUCKET_NAME is not None
 
 
 @lru_cache()

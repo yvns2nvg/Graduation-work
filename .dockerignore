@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+env/
+
+# Environment (Cloud Run에서는 환경변수로 직접 설정)
+.env
+
+# Database (로컬 개발용)
+*.db
+*.sqlite3
+
+# Storage (로컬 개발용, Cloud Run에서는 GCS 사용)
+storage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+htmlcov/
+
+# Documentation
+*.md

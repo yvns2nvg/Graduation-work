@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 async def request_3d_conversion(image_path: str) -> dict:
-    """TRELLIS 서버에 이미지 → 3D 모델 변환 요청
+    """TRELLIS 서버에 이미지 → 3D 모델 변환 요청 (로컬 파일 경로 기반)
 
     Args:
         image_path: 로컬에 저장된 이미지 파일 경로
@@ -41,14 +41,49 @@ async def request_3d_conversion(image_path: str) -> dict:
                 "error": f"이미지 파일을 찾을 수 없습니다: {image_path}",
             }
 
+        with open(image_path, "rb") as f:
+            image_bytes = f.read()
+
+        return await _send_to_trellis(image_bytes, image_file.name)
+
+    except Exception as e:
+        logger.error(f"TRELLIS 서버 통신 중 예외 발생: {e}")
+        return {
+            "success": False,
+            "model_data": None,
+            "file_extension": None,
+            "error": str(e),
+        }
+
+
+async def request_3d_conversion_from_bytes(image_bytes: bytes, filename: str = "image.png") -> dict:
+    """TRELLIS 서버에 이미지 → 3D 모델 변환 요청 (바이트 데이터 기반, GCS 호환)
+
+    Args:
+        image_bytes: 이미지 바이너리 데이터
+        filename: 파일명 (TRELLIS 서버 전송용)
+
+    Returns:
+        dict: {
+            "success": bool,
+            "model_data": bytes | None,
+            "file_extension": str | None,
+            "error": str | None
+        }
+    """
+    return await _send_to_trellis(image_bytes, filename)
+
+
+async def _send_to_trellis(image_bytes: bytes, filename: str) -> dict:
+    """TRELLIS 서버에 이미지 데이터 전송하는 내부 함수"""
+    try:
         async with httpx.AsyncClient(timeout=settings.TRELLIS_REQUEST_TIMEOUT) as client:
             # 이미지 파일을 multipart/form-data로 전송
-            with open(image_path, "rb") as f:
-                files = {"image": (image_file.name, f, "image/png")}
-                response = await client.post(
-                    f"{settings.TRELLIS_SERVER_URL}/convert",
-                    files=files,
-                )
+            files = {"image": (filename, image_bytes, "image/png")}
+            response = await client.post(
+                f"{settings.TRELLIS_SERVER_URL}/convert",
+                files=files,
+            )
 
             if response.status_code == 200:
                 content_type = response.headers.get("content-type", "")

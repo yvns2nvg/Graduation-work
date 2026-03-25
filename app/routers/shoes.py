@@ -4,9 +4,11 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi.responses import Response, RedirectResponse
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db, async_session
 from app.middleware.auth import get_current_user
 from app.models.user import User
@@ -21,6 +23,7 @@ from app.services import llm_service, trellis_service, storage_service
 
 router = APIRouter(prefix="/api/shoes", tags=["신발 생성"])
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 # ===== 백그라운드 작업 함수 =====
@@ -41,7 +44,7 @@ async def _background_generate_image(generation_id: int, prompt: str):
             result = await llm_service.request_image_generation(prompt)
 
             if result["success"] and result["image_data"]:
-                # 이미지 바이너리 데이터인 경우 로컬에 저장
+                # 이미지 바이너리 데이터인 경우 저장 (로컬 or GCS)
                 if isinstance(result["image_data"], bytes):
                     image_path = storage_service.save_image(result["image_data"])
                 else:
@@ -78,9 +81,19 @@ async def _background_convert_3d(generation_id: int, image_path: str):
             gen.updated_at = datetime.utcnow()
             await db.commit()
 
-            # 2) TRELLIS 서버에 3D 변환 요청
-            abs_image_path = str(storage_service.get_file_path(image_path))
-            result = await trellis_service.request_3d_conversion(abs_image_path)
+            # 2) 이미지 데이터 가져오기 (로컬 or GCS)
+            image_bytes = storage_service.get_file_bytes(image_path)
+            if not image_bytes:
+                gen.status = "failed"
+                gen.updated_at = datetime.utcnow()
+                await db.commit()
+                logger.error(f"3D 변환용 이미지를 찾을 수 없음: {image_path}")
+                return
+
+            # 3) TRELLIS 서버에 3D 변환 요청
+            result = await trellis_service.request_3d_conversion_from_bytes(
+                image_bytes, image_path.split("/")[-1]
+            )
 
             if result["success"] and result["model_data"]:
                 if isinstance(result["model_data"], bytes):
@@ -162,14 +175,20 @@ async def get_image(
     current_user: User = Depends(get_current_user),
 ):
     """생성된 이미지 조회"""
-    from fastapi.responses import FileResponse
-
     gen = await db.get(Generation, generation_id)
     if not gen or gen.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업을 찾을 수 없습니다")
 
     if not gen.image_url:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="이미지가 아직 생성되지 않았습니다")
+
+    # GCS 모드: 공개 URL로 리다이렉트
+    if settings.is_cloud_storage:
+        public_url = storage_service.get_public_url(gen.image_url)
+        return RedirectResponse(url=public_url)
+
+    # 로컬 모드: 파일 직접 서빙
+    from fastapi.responses import FileResponse
 
     file_path = storage_service.get_file_path(gen.image_url)
     if not file_path.exists():
@@ -227,14 +246,20 @@ async def get_3d_model(
     current_user: User = Depends(get_current_user),
 ):
     """3D 모델 파일 조회"""
-    from fastapi.responses import FileResponse
-
     gen = await db.get(Generation, generation_id)
     if not gen or gen.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업을 찾을 수 없습니다")
 
     if not gen.model_3d_url:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="3D 모델이 아직 생성되지 않았습니다")
+
+    # GCS 모드: 공개 URL로 리다이렉트
+    if settings.is_cloud_storage:
+        public_url = storage_service.get_public_url(gen.model_3d_url)
+        return RedirectResponse(url=public_url)
+
+    # 로컬 모드: 파일 직접 서빙
+    from fastapi.responses import FileResponse
 
     file_path = storage_service.get_file_path(gen.model_3d_url)
     if not file_path.exists():
@@ -281,7 +306,7 @@ async def delete_generation(
     if not gen or gen.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="작업을 찾을 수 없습니다")
 
-    # 관련 파일 삭제
+    # 관련 파일 삭제 (로컬 or GCS)
     if gen.image_url:
         storage_service.delete_file(gen.image_url)
     if gen.model_3d_url:

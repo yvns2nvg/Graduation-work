@@ -9,6 +9,7 @@ settings = get_settings()
 
 # ----- 비동기 엔진 생성 -----
 # SQLite: connect_args로 check_same_thread 비활성화
+# PostgreSQL (Cloud SQL): 추가 옵션 없이 생성
 if settings.DATABASE_URL.startswith("sqlite"):
     engine = create_async_engine(
         settings.DATABASE_URL,
@@ -16,9 +17,13 @@ if settings.DATABASE_URL.startswith("sqlite"):
         echo=False,
     )
 else:
+    # PostgreSQL (Cloud Run + Cloud SQL 등)
     engine = create_async_engine(
         settings.DATABASE_URL,
         echo=False,
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,  # 연결 유효성 사전 체크 (Cloud SQL 연결 끊김 방지)
     )
 
 # ----- 비동기 세션 팩토리 -----
