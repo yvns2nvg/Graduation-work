@@ -53,6 +53,7 @@ async def _background_generate_image(generation_id: int, prompt: str):
 
                 gen.image_url = image_path
                 gen.status = "image_done"
+                logger.info(f"✅ [Storage & DB] 이미지 파일 저장 완료 및 DB 업데이트 성공 (ID: {generation_id}, 파일경로: {image_path})")
             else:
                 gen.status = "failed"
                 logger.error(f"이미지 생성 실패 (ID: {generation_id}): {result['error']}")
@@ -106,6 +107,7 @@ async def _background_convert_3d(generation_id: int, image_path: str):
 
                 gen.model_3d_url = model_path
                 gen.status = "done"
+                logger.info(f"✅ [Storage & DB] 3D 모델 파일 저장 완료 및 DB 업데이트 성공 (ID: {generation_id}, 파일경로: {model_path})")
             else:
                 gen.status = "failed"
                 logger.error(f"3D 변환 실패 (ID: {generation_id}): {result['error']}")
@@ -146,6 +148,7 @@ async def generate_image(
     db.add(generation)
     await db.commit()
     await db.refresh(generation)
+    logger.info(f"✅ [DB] 새로운 신발 생성 요청 DB 저장 완료 (작업 ID: {generation.id}, 프롬프트: '{generation.prompt_text}')")
 
     # 백그라운드에서 이미지 생성 실행
     background_tasks.add_task(_background_generate_image, generation.id, body.prompt_text)
