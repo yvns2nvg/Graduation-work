@@ -1,6 +1,6 @@
-# 👟 Text-to-3D Shoe Platform
+# 🖥️ Text-to-3D Generation Backend
 
-> 사용자가 입력한 텍스트를 기반으로 신발 이미지를 생성하고, 가우시안 스플래팅(Gaussian Splatting)을 통해 3D 모델로 변환하여 웹에서 시각화 및 다운로드할 수 있는 플랫폼
+> 사용자가 입력한 텍스트를 기반으로 이미지를 생성하고, 가우시안 스플래팅(Gaussian Splatting)을 통해 3D 모델로 변환하여 웹에서 시각화 및 다운로드할 수 있는 플랫폼의 백엔드 시스템입니다.
 
 ---
 
@@ -8,9 +8,9 @@
 
 | 항목 | 내용 |
 |------|------|
-| **목표** | 텍스트 → 신발 이미지 → 3D 모델 생성 → 웹 시각화 & 다운로드 |
-| **핵심 기술** | Text-to-Image (로컬 LLM), Gaussian Splatting (TRELLIS), 3D Viewer (Three.js) |
-| **플랫폼** | 웹 기반 (PC/모바일 대응) |
+| **핵심 기능** | 텍스트 → 이미지 생성 → 3D 모델 생성 (파이프라인 관리 및 상태 조회) |
+| **핵심 기술** | FastAPI, Text-to-Image (로컬/외부 LLM 연동), Gaussian Splatting (TRELLIS 연동), WebSocket |
+| **데이터 유지** | SQLite / SQLAlchemy / 로컬 파일 스토리지 |
 
 ---
 
@@ -19,7 +19,7 @@
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌───────────────────┐     ┌─────────────────┐     ┌──────────────┐
 │  사용자 입력   │────▶│  Backend (API)   │────▶│  LLM 서버 (AI팀)   │────▶│  Backend (API)  │────▶│  사용자 응답    │
-│  (텍스트)     │     │  텍스트 전달        │     │  신발 이미지 생성    │     │  이미지 수신       │     │  이미지 확인    │
+│  (텍스트)     │     │  텍스트 전달        │     │  이미지 생성       │     │  이미지 수신       │     │  이미지 확인    │
 └─────────────┘     └──────────────────┘     └───────────────────┘     └─────────────────┘     └──────────────┘
                                                                                                        │
                                                                                                        ▼
@@ -31,7 +31,7 @@
 
 ---
 
-## 🏗️ 시스템 아키텍처
+## 🏗️ 백엔드 시스템 아키텍처
 
 ```
                         ┌──────────────────────────────────┐
@@ -49,7 +49,7 @@
                         │  • 텍스트 → LLM 서버 요청 중계        │
                         │  • 이미지 → 3D 변환 서버 요청 중계     │
                         │  • 결과물 저장 및 전달               │
-                        │  • 작업 상태 관리 (큐/폴링)           │
+                        │  • 작업 상태 관리 (웹소켓/폴링)       │
                         │  • 파일 스토리지 관리                │
                         └───┬──────────┬───────────┬───────┘
                             │          │           │
@@ -59,57 +59,34 @@
               │   생성 이력,   │  │  로컬 모델   │  │   Gaussian        │
               │   파일 메타)   │  │  Linux Cloud│  │   Splatting)      │
               │               │  │  GPU 서버   │  │  Linux Cloud      │
-              │               │  │  OpenAI API │  │  GPU 서버          │
-              │               │  │  호환 규격   │  │                   │
+              │               │  │  호환 규격   │  │  GPU 서버          │
               └────────────────┘  └─────────────┘  └───────────────────┘
 ```
 
 ---
 
-## 👥 역할 분담
+## 📡 Backend API 엔드포인트 주요 흐름
 
-| 담당 | 역할 | 주요 산출물 |
-|------|------|------------|
-| **Backend (나)** | FastAPI 서버, DB, 중간 경로 전체 | API 서버, DB 스키마, 파일 관리 |
-| **AI/LLM 팀** | 텍스트→신발 이미지 생성 (로컬 LLM, Linux Cloud GPU) | 이미지 생성 API (OpenAI API 호환 규격) |
-| **3D 팀** | TRELLIS 가우시안 스플래팅 3D 변환 (Linux Cloud GPU) | 3D 변환 파이프라인 |
-| **Frontend 팀** | 웹 UI, 3D 뷰어 (Three.js) | 프론트엔드 애플리케이션 |
+### 1. 인증 (Auth)
+- `POST /api/auth/register` : 회원가입
+- `POST /api/auth/login` : 로그인 (JWT)
+- `GET /api/auth/me` : 내 정보 조회
 
----
+### 2. 생성 파이프라인 (Text-to-3D)
+- `POST /api/text-to-3d/generate` : 텍스트 기반 이미지 생성 요청
+- `GET /api/text-to-3d/:id/status` : 생성 작업 상태 조회
+- `GET /api/text-to-3d/:id/image` : 결과 이미지 조회
+- `POST /api/text-to-3d/:id/convert-3d` : 3D 모델 변환 요청
+- `GET /api/text-to-3d/:id/3d-status` : 3D 변환 상태 조회
+- `GET /api/text-to-3d/:id/3d-model` : 3D 모델 파일 조회
 
-## 📡 Backend API 엔드포인트 (예시)
-
-### 인증
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| POST | `/api/auth/register` | 회원가입 |
-| POST | `/api/auth/login` | 로그인 (JWT 발급) |
-| GET | `/api/auth/me` | 내 정보 조회 |
-
-### 신발 생성
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| POST | `/api/shoes/generate` | 텍스트 기반 이미지 생성 요청 |
-| GET | `/api/shoes/:id/status` | 생성 작업 상태 조회 |
-| GET | `/api/shoes/:id/image` | 생성된 이미지 조회 |
-
-### 3D 변환
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| POST | `/api/shoes/:id/convert-3d` | 3D 모델 변환 요청 |
-| GET | `/api/shoes/:id/3d-status` | 3D 변환 상태 조회 |
-| GET | `/api/shoes/:id/3d-model` | 3D 모델 파일 조회 |
-| GET | `/api/shoes/:id/download` | 3D 파일 다운로드 |
-
-### 이력 관리
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/shoes/history` | 내 생성 이력 조회 |
-| DELETE | `/api/shoes/:id` | 생성물 삭제 |
+### 3. 다운로드 및 실시간 소켓 (Download & WebSocket)
+- `GET /api/download/:id` : 3D 파일 다운로드
+- `WS /ws/generation/:id` : 생성 상태 실시간 스트리밍 소켓 연결
 
 ---
 
-## 🗄️ DB 스키마 (초안)
+## 🗄️ DB 스키마 요약
 
 ```sql
 -- 사용자
@@ -121,7 +98,7 @@ CREATE TABLE users (
     created_at  TIMESTAMP DEFAULT NOW()
 );
 
--- 생성 작업
+-- 생성 작업 데이터
 CREATE TABLE generations (
     id              SERIAL PRIMARY KEY,
     user_id         INT REFERENCES users(id),
@@ -136,7 +113,7 @@ CREATE TABLE generations (
 
 ---
 
-## 📂 프로젝트 폴더 구조 (예상)
+## 📂 Backend 프로젝트 구조 정리
 
 ```
 Backend/
@@ -145,29 +122,14 @@ Backend/
 │   ├── main.py              # FastAPI 앱 진입점
 │   ├── config.py             # 환경 설정
 │   ├── models/               # DB 모델 (SQLAlchemy)
-│   │   ├── user.py
-│   │   └── generation.py
 │   ├── schemas/              # Pydantic 요청/응답 스키마
-│   │   ├── user.py
-│   │   └── generation.py
-│   ├── routers/              # API 라우터
-│   │   ├── auth.py
-│   │   ├── shoes.py
-│   │   └── download.py
-│   ├── services/             # 비즈니스 로직
-│   │   ├── auth_service.py
-│   │   ├── llm_service.py    # LLM 서버 통신
-│   │   ├── trellis_service.py # TRELLIS 3D 변환 서버 통신
-│   │   └── storage_service.py
-│   ├── middleware/            # 미들웨어
-│   │   └── auth.py
-│   └── utils/                # 유틸리티
-│       └── file_handler.py
-├── storage/                  # 로컬 파일 저장소
-│   ├── images/
-│   └── models_3d/
+│   ├── routers/              # API 라우터 (auth.py, text_to_3d.py, download.py, websocket.py)
+│   ├── services/             # 비즈니스 로직 (Auth, LLM 통신, TRELLIS 연동 설계, Storage)
+│   ├── middleware/            # 로깅, 인증 미들웨어
+│   └── utils/                # 유틸 모듈
+├── storage/                  # 로컬 파일 저장소 (이미지, 3D 에셋 보관)
 ├── requirements.txt
-├── .env
+├── .env.example
 ├── .gitignore
 └── README.md
 ```
