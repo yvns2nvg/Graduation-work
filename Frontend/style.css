@@ -527,6 +527,130 @@ a { text-decoration: none; color: inherit; cursor: pointer; }
   margin-bottom: 20px;
 }
 
+/* Input divider */
+.input-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 20px;
+  color: var(--text-light);
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.input-divider::before,
+.input-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Upload area */
+.upload-area {
+  margin-bottom: 20px;
+}
+
+.upload-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  cursor: pointer;
+  transition: var(--transition);
+  overflow: hidden;
+  min-height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-dropzone:hover {
+  border-color: var(--purple-light);
+  background: var(--purple-pale);
+}
+
+.upload-dropzone.drag-over {
+  border-color: var(--purple);
+  background: var(--purple-pale);
+  box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+}
+
+.upload-dropzone.has-image {
+  border-style: solid;
+  border-color: var(--purple-light);
+  cursor: default;
+}
+
+#uploadPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+}
+
+.upload-icon { font-size: 2rem; }
+
+#uploadPlaceholder p {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+
+#uploadPlaceholder small {
+  font-size: .75rem;
+  color: var(--text-light);
+}
+
+.upload-preview {
+  position: relative;
+  width: 100%;
+  height: 160px;
+}
+
+.upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.upload-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: .85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  z-index: 2;
+}
+
+.upload-remove:hover { background: var(--red); }
+
+/* Disabled states */
+.prompt-textarea:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+  resize: none;
+}
+
+.upload-dropzone.disabled {
+  opacity: .4;
+  pointer-events: none;
+}
+
 .example-prompts {
   margin-bottom: 24px;
 }

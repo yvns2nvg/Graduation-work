@@ -1,5 +1,5 @@
 /* ========================================
-   SNEAKER AI — FRONTEND APPLICATION
+   HOME — FRONTEND APPLICATION
    API Base: http://localhost:8000
    ======================================== */
 
@@ -13,15 +13,42 @@ let state = {
   pollTimer: null,
   ws: null,
   threeScene: null,
+  uploadedFile: null,   // File object for image upload
 };
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async () => {
-  // Prompt textarea character counter
+  // Prompt textarea character counter + mutual exclusion with upload
   const ta = document.getElementById('promptInput');
   if (ta) {
     ta.addEventListener('input', () => {
       document.getElementById('charCount').textContent = ta.value.length;
+      // If user types, disable upload
+      const dropzone = document.getElementById('uploadDropzone');
+      if (ta.value.length > 0) {
+        dropzone.classList.add('disabled');
+      } else {
+        dropzone.classList.remove('disabled');
+      }
+    });
+  }
+
+  // Drag & drop on upload dropzone
+  const dropzone = document.getElementById('uploadDropzone');
+  if (dropzone) {
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!dropzone.classList.contains('disabled')) {
+        dropzone.classList.add('drag-over');
+      }
+    });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      if (dropzone.classList.contains('disabled')) return;
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) applyUploadedFile(file);
     });
   }
 
@@ -169,12 +196,62 @@ function logout() {
 }
 
 // ===================================
+// IMAGE UPLOAD HANDLERS
+// ===================================
+function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (file) applyUploadedFile(file);
+}
+
+function applyUploadedFile(file) {
+  state.uploadedFile = file;
+
+  // Show preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('uploadedImg').src = e.target.result;
+    document.getElementById('uploadPlaceholder').classList.add('hidden');
+    document.getElementById('uploadPreview').classList.remove('hidden');
+    document.getElementById('uploadDropzone').classList.add('has-image');
+  };
+  reader.readAsDataURL(file);
+
+  // Disable prompt + hide example chips
+  const ta = document.getElementById('promptInput');
+  ta.disabled = true;
+  ta.placeholder = '사진이 업로드되면 프롬프트를 사용할 수 없습니다';
+  document.getElementById('examplePromptsSection').style.opacity = '0.4';
+  document.getElementById('examplePromptsSection').style.pointerEvents = 'none';
+}
+
+function removeUploadedImage(event) {
+  event.stopPropagation();
+  state.uploadedFile = null;
+
+  // Reset upload UI
+  document.getElementById('imageFileInput').value = '';
+  document.getElementById('uploadedImg').src = '';
+  document.getElementById('uploadPlaceholder').classList.remove('hidden');
+  document.getElementById('uploadPreview').classList.add('hidden');
+  document.getElementById('uploadDropzone').classList.remove('has-image');
+
+  // Re-enable prompt
+  const ta = document.getElementById('promptInput');
+  ta.disabled = false;
+  ta.placeholder = '예) 하트 모양이 들어간 은색 반지, 섬세한 꽃 무늬 장식...';
+  document.getElementById('examplePromptsSection').style.opacity = '';
+  document.getElementById('examplePromptsSection').style.pointerEvents = '';
+}
+
+// ===================================
 // GENERATION
 // ===================================
 async function generateImage() {
   const prompt = document.getElementById('promptInput').value.trim();
-  if (!prompt) {
-    showToast('프롬프트를 입력해주세요.', 'error');
+  const hasUpload = !!state.uploadedFile;
+
+  if (!prompt && !hasUpload) {
+    showToast('프롬프트를 입력하거나 사진을 업로드해주세요.', 'error');
     return;
   }
 
@@ -188,10 +265,29 @@ async function generateImage() {
   btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px"></span> 생성 중...';
 
   try {
-    const res = await apiFetch('/api/text-to-3d/generate', {
-      method: 'POST',
-      body: JSON.stringify({ prompt_text: prompt }),
-    });
+    let res;
+
+    if (hasUpload) {
+      // Send image file as multipart/form-data
+      const formData = new FormData();
+      formData.append('image', state.uploadedFile);
+      // Use prompt_text as empty string or omit if backend supports image-only
+      formData.append('prompt_text', prompt || '');
+
+      const headers = {};
+      if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+
+      res = await fetch(`${API_BASE}/api/text-to-3d/generate`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+    } else {
+      res = await apiFetch('/api/text-to-3d/generate', {
+        method: 'POST',
+        body: JSON.stringify({ prompt_text: prompt }),
+      });
+    }
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -468,6 +564,9 @@ function resetGeneration() {
   document.getElementById('result3D').classList.add('hidden');
   document.getElementById('promptInput').value = '';
   document.getElementById('charCount').textContent = '0';
+
+  // Reset upload
+  removeUploadedImage({ stopPropagation: () => {} });
 
   resetGenerateBtn();
 }

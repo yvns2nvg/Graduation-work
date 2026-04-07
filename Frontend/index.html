@@ -156,7 +156,29 @@
             </div>
           </div>
 
-          <div class="example-prompts">
+          <!-- 구분선 -->
+          <div class="input-divider">
+            <span>또는</span>
+          </div>
+
+          <!-- 사진 업로드 -->
+          <div class="upload-area" id="uploadArea">
+            <label class="input-label">사진 업로드</label>
+            <div class="upload-dropzone" id="uploadDropzone" onclick="document.getElementById('imageFileInput').click()">
+              <input type="file" id="imageFileInput" accept="image/*" style="display:none" onchange="handleImageUpload(event)" />
+              <div id="uploadPlaceholder">
+                <span class="upload-icon">📷</span>
+                <p>클릭하거나 이미지를 드래그하세요</p>
+                <small>JPG, PNG, WEBP 지원</small>
+              </div>
+              <div id="uploadPreview" class="upload-preview hidden">
+                <img id="uploadedImg" src="" alt="업로드된 이미지" />
+                <button class="upload-remove" onclick="removeUploadedImage(event)">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="example-prompts" id="examplePromptsSection">
             <p class="examples-label">빠른 예시</p>
             <div class="chip-group">
               <span class="chip" onclick="setPrompt('하트 모양이 들어간 은색 반지, 섬세한 꽃 무늬 장식')">하트 반지</span>
@@ -169,7 +191,7 @@
 
           <button class="btn btn-primary btn-full" id="generateBtn" onclick="generateImage()">
             <span class="btn-icon">✨</span>
-            이미지 생성하기
+            3D 모델 만들기
           </button>
         </div>
 
@@ -181,7 +203,7 @@
             <div class="empty-illustration">
               <div class="orbit-ring ring1"></div>
               <div class="orbit-ring ring2"></div>
-              <span class="sneaker-emoji">👟</span>
+              <span class="sneaker-emoji">🧊</span>
             </div>
             <h3>아직 생성된 결과가 없어요</h3>
             <p>왼쪽에서 프롬프트를 입력하고 생성을 시작하세요!</p>
