@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sneaker AI — 텍스트로 3D 신발 만들기</title>
+  <title>Home — 텍스트로 3D 모델 만들기</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -14,8 +14,7 @@
   <!-- ===== NAVBAR ===== -->
   <nav id="navbar">
     <a class="nav-logo" href="#" onclick="showPage('landing')">
-      <span class="logo-icon">👟</span>
-      <span>Sneaker<b>AI</b></span>
+      <span>Home</span>
     </a>
     <div class="nav-links" id="navLinks">
       <a href="#" onclick="showPage('generate')" id="navGenerate" class="hidden">만들기</a>
@@ -40,11 +39,11 @@
         <div class="hero-content">
           <div class="hero-badge">✨ AI 기반 3D 모델 생성</div>
           <h1 class="hero-title">
-            상상하는 신발을<br/>
+            상상하는 모든 것을<br/>
             <span class="gradient-text">3D로 만들어드려요</span>
           </h1>
           <p class="hero-sub">
-            원하는 신발을 텍스트로 설명하면 AI가 이미지를 생성하고<br/>
+            원하는 모든 것을 텍스트로 설명하면 AI가 이미지를 생성하고<br/>
             자동으로 3D 모델까지 만들어 줍니다.
           </p>
           <div class="hero-actions">
@@ -58,10 +57,10 @@
           <div class="hero-examples">
             <p class="examples-label">이런 식으로 입력해보세요</p>
             <div class="examples-list">
-              <span class="example-chip" onclick="exampleClick(this)">파란색 사이버펑크 스니커즈</span>
-              <span class="example-chip" onclick="exampleClick(this)">흰색 클래식 운동화</span>
-              <span class="example-chip" onclick="exampleClick(this)">형광 노란색 러닝화</span>
-              <span class="example-chip" onclick="exampleClick(this)">레트로 하이탑 빨간 신발</span>
+              <span class="example-chip" onclick="exampleClick(this)">하트 모양이 들어간 반지</span>
+              <span class="example-chip" onclick="exampleClick(this)">노란색의 버티컬 마우스</span>
+              <span class="example-chip" onclick="exampleClick(this)">나무로 만든 의자</span>
+              <span class="example-chip" onclick="exampleClick(this)">미래형 파란색 헬멧</span>
             </div>
           </div>
         </div>
@@ -71,14 +70,14 @@
               <div class="orbit-ring ring1"></div>
               <div class="orbit-ring ring2"></div>
               <div class="orbit-ring ring3"></div>
-              <span class="sneaker-emoji">👟</span>
+              <span class="sneaker-emoji">✨</span>
             </div>
           </div>
           <div class="hero-stat-card stat1">
             <span class="stat-icon">⚡</span>
             <div>
               <b>빠른 생성</b>
-              <small>평균 30초</small>
+              <small>평균 1분 내</small>
             </div>
           </div>
           <div class="hero-stat-card stat2">
@@ -106,14 +105,14 @@
             <div class="step-num">01</div>
             <div class="step-icon">✍️</div>
             <h3>텍스트 입력</h3>
-            <p>원하는 신발의 스타일, 색상, 특징을 자유롭게 텍스트로 입력하세요.</p>
+            <p>원하는 것의 스타일, 색상, 특징을 자유롭게 텍스트로 입력하세요.</p>
           </div>
           <div class="step-arrow">→</div>
           <div class="step-card">
             <div class="step-num">02</div>
             <div class="step-icon">🖼️</div>
             <h3>AI 이미지 생성</h3>
-            <p>AI가 텍스트를 분석하여 고품질 신발 이미지를 자동으로 생성합니다.</p>
+            <p>AI가 텍스트를 분석하여 고품질 이미지를 자동으로 생성합니다.</p>
           </div>
           <div class="step-arrow">→</div>
           <div class="step-card">
@@ -140,8 +139,8 @@
         <!-- LEFT: Input Panel -->
         <div class="gen-panel">
           <div class="panel-header">
-            <h2>✨ 새 신발 만들기</h2>
-            <p>원하는 신발을 자세히 설명해주세요</p>
+            <h2>✨ 새로 만들기</h2>
+            <p>원하는 것을 자세히 설명해주세요</p>
           </div>
 
           <div class="prompt-area">
@@ -149,7 +148,7 @@
             <textarea
               id="promptInput"
               class="prompt-textarea"
-              placeholder="예) 네온 블루 색상의 사이버펑크 스타일 하이탑 스니커즈, 금속 장식이 있고 두꺼운 밑창..."
+              placeholder="예) 하트 모양이 들어간 은색 반지, 섬세한 꽃 무늬 장식..."
               maxlength="1000"
             ></textarea>
             <div class="char-count">
@@ -160,11 +159,11 @@
           <div class="example-prompts">
             <p class="examples-label">빠른 예시</p>
             <div class="chip-group">
-              <span class="chip" onclick="setPrompt('파란색 사이버펑크 스타일 스니커즈, 네온 라인, 하이탑')">사이버펑크</span>
-              <span class="chip" onclick="setPrompt('클래식 흰색 캔버스 로우탑 스니커즈, 깔끔한 디자인')">클래식 화이트</span>
-              <span class="chip" onclick="setPrompt('형광 노란색 러닝화, 두꺼운 에어 쿠션 밑창')">러닝화</span>
-              <span class="chip" onclick="setPrompt('레트로 빨간 하이탑 농구화, 가죽 소재')">레트로 하이탑</span>
-              <span class="chip" onclick="setPrompt('메탈릭 실버 미래형 신발, 홀로그램 효과')">메탈릭 퓨처</span>
+              <span class="chip" onclick="setPrompt('하트 모양이 들어간 은색 반지, 섬세한 꽃 무늬 장식')">하트 반지</span>
+              <span class="chip" onclick="setPrompt('노란색의 인체공학적 버티컬 마우스, 매끄러운 곡선')">버티컬 마우스</span>
+              <span class="chip" onclick="setPrompt('나무로 만든 심플한 1인용 의자, 둥근 등받이')">나무 의자</span>
+              <span class="chip" onclick="setPrompt('미래형 파란색 오토바이 헬멧, 유선형 디자인')">미래형 헬멧</span>
+              <span class="chip" onclick="setPrompt('초록색 선인장 모양의 귀여운 화분')">선인장 화분</span>
             </div>
           </div>
 
@@ -287,7 +286,7 @@
         <div class="history-header">
           <div>
             <h2>📋 내 히스토리</h2>
-            <p>지금까지 만든 모든 3D 신발 모델입니다</p>
+            <p>지금까지 만든 모든 3D 모델입니다</p>
           </div>
           <button class="btn btn-primary" onclick="showPage('generate')">
             + 새로 만들기
@@ -296,8 +295,8 @@
 
         <div id="historyEmpty" class="history-empty hidden">
           <span class="empty-emoji">🗑️</span>
-          <h3>아직 만든 신발이 없어요</h3>
-          <p>첫 번째 3D 신발을 만들어보세요!</p>
+          <h3>아직 만든 모델이 없어요</h3>
+          <p>첫 번째 3D 모델을 만들어보세요!</p>
           <button class="btn btn-primary" onclick="showPage('generate')">만들러 가기</button>
         </div>
 
@@ -320,9 +319,9 @@
     <!-- LOGIN FORM -->
     <div id="formLogin">
       <div class="modal-header">
-        <span class="modal-logo">👟</span>
+        <span class="modal-logo">✨</span>
         <h2>다시 오셨군요!</h2>
-        <p>로그인하고 AI 신발 만들기를 계속하세요</p>
+        <p>로그인하고 AI 3D 만들기를 계속하세요</p>
       </div>
       <div class="form-group">
         <label>이메일</label>
@@ -340,9 +339,9 @@
     <!-- REGISTER FORM -->
     <div id="formRegister" class="hidden">
       <div class="modal-header">
-        <span class="modal-logo">👟</span>
+        <span class="modal-logo">✨</span>
         <h2>환영합니다!</h2>
-        <p>계정을 만들고 AI 신발 생성을 시작하세요</p>
+        <p>계정을 만들고 AI 3D 생성을 시작하세요</p>
       </div>
       <div class="form-group">
         <label>닉네임 <span class="optional">(선택)</span></label>

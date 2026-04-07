@@ -91,12 +91,6 @@ a { text-decoration: none; color: inherit; cursor: pointer; }
   color: var(--text);
 }
 
-.logo-icon {
-  font-size: 1.5rem;
-  display: inline-block;
-  animation: wobble 3s ease-in-out infinite;
-}
-
 @keyframes wobble {
   0%, 100% { transform: rotate(-8deg); }
   50% { transform: rotate(8deg); }
