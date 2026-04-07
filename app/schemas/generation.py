@@ -14,8 +14,8 @@ class GenerateRequest(BaseModel):
         ...,
         min_length=1,
         max_length=1000,
-        description="신발 생성을 위한 텍스트 프롬프트",
-        examples=["빨간색 나이키 운동화, 미래적인 디자인"],
+        description="이미지/3D 생성을 위한 텍스트 프롬프트",
+        examples=["파란색 사이버펑크 스타일의 의자"],
     )
 
 

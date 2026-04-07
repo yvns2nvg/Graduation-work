@@ -8,10 +8,10 @@ from functools import lru_cache
 class Settings(BaseSettings):
     """애플리케이션 환경 설정"""
 
-    # ----- Database -----
-    # 로컬: sqlite+aiosqlite:///./shoe_platform.db
-    # Cloud Run: postgresql+asyncpg://user:pass@host:5432/dbname
-    DATABASE_URL: str = "sqlite+aiosqlite:///./shoe_platform.db"
+    # SQLite 데이터베이스 설정 (개발 환경용)
+    # 로컬: sqlite+aiosqlite:///./text_to_3d.db
+    # GCS 사용 시: 클라우드 SQL 등 다른 DB URL 사용 고려
+    DATABASE_URL: str = "sqlite+aiosqlite:///./text_to_3d.db"
 
     # ----- JWT -----
     JWT_SECRET_KEY: str = "change-this-to-a-secure-random-key"

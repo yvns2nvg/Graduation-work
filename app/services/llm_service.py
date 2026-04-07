@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 async def request_image_generation(prompt: str) -> dict:
-    """LLM 서버에 신발 이미지 생성 요청
+    """LLM 서버에 이미지 생성 요청
 
     Args:
-        prompt: 사용자가 입력한 신발 설명 텍스트
+        prompt: 사용자가 입력한 설명 텍스트
 
     Returns:
         dict: {
@@ -37,7 +37,7 @@ async def request_image_generation(prompt: str) -> dict:
                 f"{settings.LLM_SERVER_URL}/generate",
                 json={
                     "prompt": prompt,
-                    "type": "shoe",
+                    "type": "image",
                 },
             )
 

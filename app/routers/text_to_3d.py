@@ -1,4 +1,4 @@
-"""신발 생성 API 라우터 - 이미지 생성, 3D 변환, 상태 조회, 이력 관리"""
+"""이미지/3D 생성 API 라우터 - 이미지 생성, 3D 변환, 상태 조회, 이력 관리"""
 
 import logging
 from datetime import datetime
@@ -21,7 +21,7 @@ from app.schemas.generation import (
 )
 from app.services import llm_service, trellis_service, storage_service
 
-router = APIRouter(prefix="/api/shoes", tags=["신발 생성"])
+router = APIRouter(prefix="/api/text-to-3d", tags=["이미지/3D 생성"])
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
@@ -133,11 +133,11 @@ async def generate_image(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """텍스트 기반 신발 이미지 생성 요청
+    """텍스트 기반 이미지 생성 요청
 
     - 작업을 DB에 등록하고 즉시 응답 (202 Accepted)
     - 실제 이미지 생성은 백그라운드에서 비동기 처리
-    - 상태는 `/api/shoes/{id}/status`로 조회
+    - 상태는 `/api/text-to-3d/{id}/status`로 조회
     """
     # DB에 새 작업 등록
     generation = Generation(
@@ -148,7 +148,7 @@ async def generate_image(
     db.add(generation)
     await db.commit()
     await db.refresh(generation)
-    logger.info(f"✅ [DB] 새로운 신발 생성 요청 DB 저장 완료 (작업 ID: {generation.id}, 프롬프트: '{generation.prompt_text}')")
+    logger.info(f"✅ [DB] 새로운 생성 요청 DB 저장 완료 (작업 ID: {generation.id}, 프롬프트: '{generation.prompt_text}')")
 
     # 백그라운드에서 이미지 생성 실행
     background_tasks.add_task(_background_generate_image, generation.id, body.prompt_text)

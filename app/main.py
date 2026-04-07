@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
-from app.routers import auth, shoes, download, websocket
+from app.routers import auth, text_to_3d, download, websocket
 from app.services.storage_service import ensure_storage_dirs
 
 # ----- 로깅 설정 -----
@@ -33,8 +33,8 @@ async def lifespan(app: FastAPI):
 
 # ----- FastAPI 앱 생성 -----
 app = FastAPI(
-    title="👟 Text-to-3D Shoe Platform API",
-    description="텍스트를 기반으로 신발 이미지를 생성하고, TRELLIS 가우시안 스플래팅으로 3D 모델을 만드는 플랫폼",
+    title="👟 Text-to-3D Platform API",
+    description="텍스트를 기반으로 이미지를 생성하고, TRELLIS 가우시안 스플래팅으로 3D 모델을 만드는 플랫폼",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -50,7 +50,7 @@ app.add_middleware(
 
 # ----- 라우터 등록 -----
 app.include_router(auth.router)
-app.include_router(shoes.router)
+app.include_router(text_to_3d.router)
 app.include_router(download.router)
 app.include_router(websocket.router)
 
@@ -60,7 +60,7 @@ app.include_router(websocket.router)
 async def root():
     """API 서버 상태 확인"""
     return {
-        "message": "👟 Text-to-3D Shoe Platform API",
+        "message": "👟 Text-to-3D Platform API",
         "docs": "/docs",
         "status": "running",
     }

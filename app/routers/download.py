@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models.generation import Generation
 from app.services import storage_service
 
-router = APIRouter(prefix="/api/shoes", tags=["다운로드"])
+router = APIRouter(prefix="/api/text-to-3d", tags=["다운로드"])
 settings = get_settings()
 
 
@@ -43,7 +43,7 @@ async def download_3d_model(
         extension = "." + gen.model_3d_url.rsplit(".", 1)[-1]
     else:
         extension = ".glb"
-    download_filename = f"shoe_{gen.id}_{prompt_slug}{extension}"
+    download_filename = f"result_{gen.id}_{prompt_slug}{extension}"
 
     # GCS 모드: 파일 데이터를 GCS에서 가져와서 Response로 반환
     if settings.is_cloud_storage:

@@ -1,1 +1,1 @@
-"""Text-to-3D Shoe Platform Backend"""
+"""Text-to-3D Platform Backend"""
