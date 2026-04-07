@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sneaker AI — 텍스트로 3D 신발 만들기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav id="navbar">
+    <a class="nav-logo" href="#" onclick="showPage('landing')">
+      <span class="logo-icon">👟</span>
+      <span>Sneaker<b>AI</b></span>
+    </a>
+    <div class="nav-links" id="navLinks">
+      <a href="#" onclick="showPage('generate')" id="navGenerate" class="hidden">만들기</a>
+      <a href="#" onclick="showPage('history')" id="navHistory" class="hidden">히스토리</a>
+    </div>
+    <div class="nav-auth" id="navAuth">
+      <button class="btn btn-ghost" onclick="openAuthModal('login')">로그인</button>
+      <button class="btn btn-primary" onclick="openAuthModal('register')">시작하기</button>
+    </div>
+    <div class="nav-user hidden" id="navUser">
+      <span class="user-badge" id="userNickname"></span>
+      <button class="btn btn-ghost" onclick="logout()">로그아웃</button>
+    </div>
+  </nav>
+
+  <!-- ===== APP CONTAINER ===== -->
+  <div id="app">
+
+    <!-- ========== LANDING PAGE ========== -->
+    <section id="page-landing" class="page">
+      <div class="hero">
+        <div class="hero-content">
+          <div class="hero-badge">✨ AI 기반 3D 모델 생성</div>
+          <h1 class="hero-title">
+            상상하는 신발을<br/>
+            <span class="gradient-text">3D로 만들어드려요</span>
+          </h1>
+          <p class="hero-sub">
+            원하는 신발을 텍스트로 설명하면 AI가 이미지를 생성하고<br/>
+            자동으로 3D 모델까지 만들어 줍니다.
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-xl" onclick="openAuthModal('register')">
+              무료로 시작하기 🚀
+            </button>
+            <button class="btn btn-ghost btn-xl" onclick="openAuthModal('login')">
+              로그인
+            </button>
+          </div>
+          <div class="hero-examples">
+            <p class="examples-label">이런 식으로 입력해보세요</p>
+            <div class="examples-list">
+              <span class="example-chip" onclick="exampleClick(this)">파란색 사이버펑크 스니커즈</span>
+              <span class="example-chip" onclick="exampleClick(this)">흰색 클래식 운동화</span>
+              <span class="example-chip" onclick="exampleClick(this)">형광 노란색 러닝화</span>
+              <span class="example-chip" onclick="exampleClick(this)">레트로 하이탑 빨간 신발</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-card floating">
+            <div class="placeholder-3d">
+              <div class="orbit-ring ring1"></div>
+              <div class="orbit-ring ring2"></div>
+              <div class="orbit-ring ring3"></div>
+              <span class="sneaker-emoji">👟</span>
+            </div>
+          </div>
+          <div class="hero-stat-card stat1">
+            <span class="stat-icon">⚡</span>
+            <div>
+              <b>빠른 생성</b>
+              <small>평균 30초</small>
+            </div>
+          </div>
+          <div class="hero-stat-card stat2">
+            <span class="stat-icon">🎨</span>
+            <div>
+              <b>고품질</b>
+              <small>AI 이미지 생성</small>
+            </div>
+          </div>
+          <div class="hero-stat-card stat3">
+            <span class="stat-icon">📦</span>
+            <div>
+              <b>GLB/PLY</b>
+              <small>3D 파일 다운로드</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOW IT WORKS -->
+      <div class="section how-it-works">
+        <h2 class="section-title">어떻게 작동하나요?</h2>
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-num">01</div>
+            <div class="step-icon">✍️</div>
+            <h3>텍스트 입력</h3>
+            <p>원하는 신발의 스타일, 색상, 특징을 자유롭게 텍스트로 입력하세요.</p>
+          </div>
+          <div class="step-arrow">→</div>
+          <div class="step-card">
+            <div class="step-num">02</div>
+            <div class="step-icon">🖼️</div>
+            <h3>AI 이미지 생성</h3>
+            <p>AI가 텍스트를 분석하여 고품질 신발 이미지를 자동으로 생성합니다.</p>
+          </div>
+          <div class="step-arrow">→</div>
+          <div class="step-card">
+            <div class="step-num">03</div>
+            <div class="step-icon">🧊</div>
+            <h3>3D 모델 변환</h3>
+            <p>생성된 이미지를 TRELLIS 기술로 3D 모델로 변환합니다.</p>
+          </div>
+          <div class="step-arrow">→</div>
+          <div class="step-card">
+            <div class="step-num">04</div>
+            <div class="step-icon">⬇️</div>
+            <h3>다운로드</h3>
+            <p>완성된 3D 모델을 GLB, PLY 등 다양한 포맷으로 다운로드하세요.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== GENERATE PAGE ========== -->
+    <section id="page-generate" class="page hidden">
+      <div class="gen-layout">
+
+        <!-- LEFT: Input Panel -->
+        <div class="gen-panel">
+          <div class="panel-header">
+            <h2>✨ 새 신발 만들기</h2>
+            <p>원하는 신발을 자세히 설명해주세요</p>
+          </div>
+
+          <div class="prompt-area">
+            <label class="input-label">프롬프트</label>
+            <textarea
+              id="promptInput"
+              class="prompt-textarea"
+              placeholder="예) 네온 블루 색상의 사이버펑크 스타일 하이탑 스니커즈, 금속 장식이 있고 두꺼운 밑창..."
+              maxlength="1000"
+            ></textarea>
+            <div class="char-count">
+              <span id="charCount">0</span> / 1000
+            </div>
+          </div>
+
+          <div class="example-prompts">
+            <p class="examples-label">빠른 예시</p>
+            <div class="chip-group">
+              <span class="chip" onclick="setPrompt('파란색 사이버펑크 스타일 스니커즈, 네온 라인, 하이탑')">사이버펑크</span>
+              <span class="chip" onclick="setPrompt('클래식 흰색 캔버스 로우탑 스니커즈, 깔끔한 디자인')">클래식 화이트</span>
+              <span class="chip" onclick="setPrompt('형광 노란색 러닝화, 두꺼운 에어 쿠션 밑창')">러닝화</span>
+              <span class="chip" onclick="setPrompt('레트로 빨간 하이탑 농구화, 가죽 소재')">레트로 하이탑</span>
+              <span class="chip" onclick="setPrompt('메탈릭 실버 미래형 신발, 홀로그램 효과')">메탈릭 퓨처</span>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-full" id="generateBtn" onclick="generateImage()">
+            <span class="btn-icon">✨</span>
+            이미지 생성하기
+          </button>
+        </div>
+
+        <!-- RIGHT: Result Panel -->
+        <div class="gen-result">
+
+          <!-- Empty State -->
+          <div id="resultEmpty" class="result-empty">
+            <div class="empty-illustration">
+              <div class="orbit-ring ring1"></div>
+              <div class="orbit-ring ring2"></div>
+              <span class="sneaker-emoji">👟</span>
+            </div>
+            <h3>아직 생성된 결과가 없어요</h3>
+            <p>왼쪽에서 프롬프트를 입력하고 생성을 시작하세요!</p>
+          </div>
+
+          <!-- Generation In Progress -->
+          <div id="resultProgress" class="result-progress hidden">
+            <div class="progress-header">
+              <h3 id="progressTitle">이미지 생성 중...</h3>
+              <span class="status-badge" id="statusBadge">pending</span>
+            </div>
+
+            <!-- Pipeline Steps -->
+            <div class="pipeline">
+              <div class="pipeline-step" id="step-pending">
+                <div class="step-dot"></div>
+                <div class="step-info">
+                  <b>요청 접수</b>
+                  <small>생성 요청을 처리 중입니다</small>
+                </div>
+              </div>
+              <div class="pipeline-line"></div>
+              <div class="pipeline-step" id="step-generating">
+                <div class="step-dot"></div>
+                <div class="step-info">
+                  <b>이미지 생성</b>
+                  <small>AI가 이미지를 그리는 중...</small>
+                </div>
+              </div>
+              <div class="pipeline-line"></div>
+              <div class="pipeline-step" id="step-image_done">
+                <div class="step-dot"></div>
+                <div class="step-info">
+                  <b>이미지 완성</b>
+                  <small>이미지 생성 완료!</small>
+                </div>
+              </div>
+              <div class="pipeline-line"></div>
+              <div class="pipeline-step" id="step-converting">
+                <div class="step-dot"></div>
+                <div class="step-info">
+                  <b>3D 변환</b>
+                  <small>3D 모델 변환 중...</small>
+                </div>
+              </div>
+              <div class="pipeline-line"></div>
+              <div class="pipeline-step" id="step-done">
+                <div class="step-dot"></div>
+                <div class="step-info">
+                  <b>완성!</b>
+                  <small>3D 모델이 준비되었습니다</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="progress-bar-wrap">
+              <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <!-- Image preview (shows after image_done) -->
+            <div id="imagePreviewWrap" class="image-preview-wrap hidden">
+              <img id="generatedImage" class="generated-img" src="" alt="생성된 이미지" />
+              <button class="btn btn-secondary btn-full" id="convertBtn" onclick="convert3D()" style="display:none">
+                <span class="btn-icon">🧊</span>
+                3D 모델로 변환하기
+              </button>
+            </div>
+
+            <!-- Error state -->
+            <div id="errorWrap" class="error-wrap hidden">
+              <span class="error-icon">⚠️</span>
+              <p id="errorMsg">생성 중 오류가 발생했습니다.</p>
+              <button class="btn btn-ghost" onclick="resetGeneration()">다시 시도</button>
+            </div>
+          </div>
+
+          <!-- 3D Viewer -->
+          <div id="result3D" class="result-3d hidden">
+            <div class="viewer-header">
+              <h3>🎉 3D 모델 완성!</h3>
+              <button class="btn btn-primary" id="downloadBtn" onclick="downloadModel()">
+                ⬇️ 다운로드
+              </button>
+            </div>
+            <div id="threeContainer" class="three-container">
+              <canvas id="threeCanvas"></canvas>
+              <div class="viewer-hint">드래그로 회전 • 스크롤로 줌</div>
+            </div>
+            <div class="result-prompt-tag" id="resultPromptTag"></div>
+            <button class="btn btn-ghost btn-full" onclick="resetGeneration()">
+              새로 만들기
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== HISTORY PAGE ========== -->
+    <section id="page-history" class="page hidden">
+      <div class="history-container">
+        <div class="history-header">
+          <div>
+            <h2>📋 내 히스토리</h2>
+            <p>지금까지 만든 모든 3D 신발 모델입니다</p>
+          </div>
+          <button class="btn btn-primary" onclick="showPage('generate')">
+            + 새로 만들기
+          </button>
+        </div>
+
+        <div id="historyEmpty" class="history-empty hidden">
+          <span class="empty-emoji">🗑️</span>
+          <h3>아직 만든 신발이 없어요</h3>
+          <p>첫 번째 3D 신발을 만들어보세요!</p>
+          <button class="btn btn-primary" onclick="showPage('generate')">만들러 가기</button>
+        </div>
+
+        <div id="historyGrid" class="history-grid"></div>
+
+        <div id="historyLoading" class="loading-state">
+          <div class="spinner"></div>
+          <p>불러오는 중...</p>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /#app -->
+
+  <!-- ===== AUTH MODAL ===== -->
+  <div id="modalBackdrop" class="modal-backdrop hidden" onclick="closeModal()"></div>
+  <div id="authModal" class="modal hidden">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+
+    <!-- LOGIN FORM -->
+    <div id="formLogin">
+      <div class="modal-header">
+        <span class="modal-logo">👟</span>
+        <h2>다시 오셨군요!</h2>
+        <p>로그인하고 AI 신발 만들기를 계속하세요</p>
+      </div>
+      <div class="form-group">
+        <label>이메일</label>
+        <input type="email" id="loginEmail" placeholder="example@email.com" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label>비밀번호</label>
+        <input type="password" id="loginPassword" placeholder="비밀번호 입력" class="form-input" />
+      </div>
+      <div id="loginError" class="form-error hidden"></div>
+      <button class="btn btn-primary btn-full" onclick="login()">로그인</button>
+      <p class="form-switch">계정이 없으신가요? <a href="#" onclick="switchForm('register')">회원가입</a></p>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="formRegister" class="hidden">
+      <div class="modal-header">
+        <span class="modal-logo">👟</span>
+        <h2>환영합니다!</h2>
+        <p>계정을 만들고 AI 신발 생성을 시작하세요</p>
+      </div>
+      <div class="form-group">
+        <label>닉네임 <span class="optional">(선택)</span></label>
+        <input type="text" id="regNickname" placeholder="닉네임 입력" class="form-input" maxlength="100" />
+      </div>
+      <div class="form-group">
+        <label>이메일</label>
+        <input type="email" id="regEmail" placeholder="example@email.com" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label>비밀번호 <span class="optional">(6자 이상)</span></label>
+        <input type="password" id="regPassword" placeholder="비밀번호 입력" class="form-input" />
+      </div>
+      <div id="registerError" class="form-error hidden"></div>
+      <button class="btn btn-primary btn-full" onclick="register()">회원가입</button>
+      <p class="form-switch">이미 계정이 있으신가요? <a href="#" onclick="switchForm('login')">로그인</a></p>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
