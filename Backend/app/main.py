@@ -42,7 +42,7 @@ app = FastAPI(
 # ----- CORS 미들웨어 (프론트엔드 연동용) -----
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 개발 단계: 모든 출처 허용. 배포 시 프론트엔드 도메인만 허용
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # 배포 시 프론트엔드 도메인 추가
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

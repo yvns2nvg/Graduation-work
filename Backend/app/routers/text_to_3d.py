@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response, RedirectResponse
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -128,30 +128,47 @@ async def _background_convert_3d(generation_id: int, image_path: str):
 
 @router.post("/generate", response_model=GenerationResponse, status_code=status.HTTP_202_ACCEPTED)
 async def generate_image(
-    body: GenerateRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    prompt_text: str = Form(default=""),
+    image: UploadFile = File(default=None),
 ):
-    """텍스트 기반 이미지 생성 요청
+    """텍스트 또는 이미지 기반 생성 요청
 
+    - JSON(prompt_text) 또는 multipart(image + prompt_text) 모두 지원
     - 작업을 DB에 등록하고 즉시 응답 (202 Accepted)
-    - 실제 이미지 생성은 백그라운드에서 비동기 처리
+    - 실제 생성은 백그라운드에서 비동기 처리
     - 상태는 `/api/text-to-3d/{id}/status`로 조회
     """
+    if not prompt_text and (image is None or image.filename == ""):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="프롬프트 또는 이미지를 제공해주세요")
+
     # DB에 새 작업 등록
     generation = Generation(
         user_id=current_user.id,
-        prompt_text=body.prompt_text,
+        prompt_text=prompt_text or "(이미지 업로드)",
         status="pending",
     )
     db.add(generation)
     await db.commit()
     await db.refresh(generation)
-    logger.info(f"✅ [DB] 새로운 생성 요청 DB 저장 완료 (작업 ID: {generation.id}, 프롬프트: '{generation.prompt_text}')")
 
-    # 백그라운드에서 이미지 생성 실행
-    background_tasks.add_task(_background_generate_image, generation.id, body.prompt_text)
+    if image and image.filename:
+        # 이미지 업로드: 파일 저장 후 바로 3D 변환 단계로
+        image_bytes = await image.read()
+        ext = "." + image.filename.rsplit(".", 1)[-1].lower() if "." in image.filename else ".png"
+        image_path = storage_service.save_image(image_bytes, extension=ext)
+        generation.image_url = image_path
+        generation.status = "image_done"
+        await db.commit()
+        await db.refresh(generation)
+        logger.info(f"✅ [DB] 이미지 업로드 생성 요청 저장 완료 (작업 ID: {generation.id}, 파일: '{image.filename}', 크기: {len(image_bytes):,} bytes)")
+        background_tasks.add_task(_background_convert_3d, generation.id, image_path)
+    else:
+        # 텍스트 프롬프트: LLM으로 이미지 생성
+        logger.info(f"✅ [DB] 텍스트 생성 요청 저장 완료 (작업 ID: {generation.id}, 프롬프트: '{prompt_text}')")
+        background_tasks.add_task(_background_generate_image, generation.id, prompt_text)
 
     return generation
 
