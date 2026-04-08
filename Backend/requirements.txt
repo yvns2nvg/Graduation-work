@@ -16,8 +16,8 @@ bcrypt==5.0.*
 # HTTP Client (외부 서버 통신)
 httpx==0.28.*
 
-# Google Cloud Storage (Cloud Run 파일 저장)
-google-cloud-storage==2.19.*
+# Supabase (Database & Storage)
+supabase==2.4.*
 
 # Utilities
 python-dotenv==1.0.*
