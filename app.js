@@ -1,9 +1,9 @@
 /* ========================================
    HOME — FRONTEND APPLICATION
-   API Base: http://localhost:8000
+   API Base: https://graduation-work-backend.onrender.com
    ======================================== */
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'https://graduation-work-backend.onrender.com';
 
 // ===== STATE =====
 let state = {
