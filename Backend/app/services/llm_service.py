@@ -16,30 +16,41 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 
-async def request_image_generation(prompt: str) -> dict:
-    """LLM 서버에 이미지 생성 요청
+async def request_image_generation(prompt: str, image_bytes: Optional[bytes] = None, filename: str = "image.png") -> dict:
+    """LLM 서버에 이미지 생성 또는 멀티뷰 전처리 요청
 
     Args:
         prompt: 사용자가 입력한 설명 텍스트
+        image_bytes: 사용자가 업로드한 원본 이미지 바이너리 (선택 사항)
+        filename: 이미지 파일명
 
     Returns:
         dict: {
             "success": bool,
-            "image_data": bytes | None,  # 생성된 이미지 바이너리 데이터
+            "image_data": bytes | None,  # 생성/전처리된 이미지(멀티뷰) 바이너리 데이터
             "error": str | None
         }
     """
     try:
         async with httpx.AsyncClient(timeout=settings.LLM_REQUEST_TIMEOUT) as client:
-            # OpenAI API 호환 규격으로 요청
-            # AI팀과 정확한 엔드포인트 형식은 추후 조율 필요
-            response = await client.post(
-                f"{settings.LLM_SERVER_URL}/generate",
-                json={
-                    "prompt": prompt,
-                    "type": "image",
-                },
-            )
+            if image_bytes:
+                # 이미지가 있는 경우: 이미지 + 프롬프트(선택)를 multipart/form-data로 전송 (멀티뷰 생성용)
+                files = {"image": (filename, image_bytes, "image/png")}
+                data = {"prompt": prompt, "type": "multiview"}
+                response = await client.post(
+                    f"{settings.LLM_SERVER_URL}/generate",
+                    files=files,
+                    data=data,
+                )
+            else:
+                # 텍스트만 있는 경우: 기존 방식대로 JSON 전송 (이미지 생성용)
+                response = await client.post(
+                    f"{settings.LLM_SERVER_URL}/generate",
+                    json={
+                        "prompt": prompt,
+                        "type": "image",
+                    },
+                )
 
             if response.status_code == 200:
                 # 이미지 데이터가 바이너리(bytes)로 올 경우

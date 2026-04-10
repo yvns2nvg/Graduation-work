@@ -1,0 +1,4 @@
+# Backend 폴더의 모든 파일은 이 파일에 지정된 소유자의 리뷰(승인)가 있어야만 합쳐질 수 있습니다.
+# TODO: 아래의 @username을 본인의 실제 GitHub 사용자 이름(ID)으로 변경해주세요!
+/Backend/ @Hyojnn
+/Frontend/ @yvns2nvg

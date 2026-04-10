@@ -9,9 +9,9 @@ class Settings(BaseSettings):
     """애플리케이션 환경 설정"""
 
     # SQLite 데이터베이스 설정 (개발 환경용)
-    # 로컬: sqlite+aiosqlite:///./text_to_3d.db
+    # 로컬: sqlite+aiosqlite:///./ring_platform.db
     # GCS 사용 시: 클라우드 SQL 등 다른 DB URL 사용 고려
-    DATABASE_URL: str = "sqlite+aiosqlite:///./text_to_3d.db"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./ring_platform.db"
 
     # ----- JWT -----
     JWT_SECRET_KEY: str = "change-this-to-a-secure-random-key"
@@ -28,9 +28,11 @@ class Settings(BaseSettings):
 
     # ----- File Storage -----
     # 로컬 개발: 로컬 폴더 사용 (STORAGE_PATH)
-    # Cloud Run: GCS 버킷 사용 (GCS_BUCKET_NAME 설정 시 자동 전환)
+    # 배포: Supabase Storage 사용 (SUPABASE_BUCKET_NAME 설정 시 자동 전환)
     STORAGE_PATH: str = "./storage"
-    GCS_BUCKET_NAME: Optional[str] = None  # 설정하면 GCS 모드로 전환
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_KEY: Optional[str] = None
+    SUPABASE_BUCKET_NAME: Optional[str] = None  # 설정하면 Supabase 모드로 전환
 
     # ----- Cloud Run 환경 판별 -----
     # Cloud Run은 자동으로 PORT 환경변수를 주입함
@@ -42,8 +44,8 @@ class Settings(BaseSettings):
 
     @property
     def is_cloud_storage(self) -> bool:
-        """GCS 버킷이 설정되어 있으면 클라우드 스토리지 모드"""
-        return self.GCS_BUCKET_NAME is not None
+        """Supabase 버킷이 설정되어 있으면 클라우드 스토리지 모드"""
+        return self.SUPABASE_BUCKET_NAME is not None
 
 
 @lru_cache()

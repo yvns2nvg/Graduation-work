@@ -28,8 +28,8 @@ settings = get_settings()
 
 # ===== 백그라운드 작업 함수 =====
 
-async def _background_generate_image(generation_id: int, prompt: str):
-    """백그라운드에서 LLM 서버로 이미지 생성 요청"""
+async def _background_generate_image(generation_id: int, prompt: str, image_bytes: Optional[bytes] = None, filename: str = "image.png"):
+    """백그라운드에서 LLM 서버로 이미지 생성 또는 멀티뷰 전처리 요청"""
     async with async_session() as db:
         try:
             # 1) 상태를 'generating'으로 변경
@@ -40,29 +40,31 @@ async def _background_generate_image(generation_id: int, prompt: str):
             gen.updated_at = datetime.utcnow()
             await db.commit()
 
-            # 2) LLM 서버에 이미지 생성 요청
-            result = await llm_service.request_image_generation(prompt)
+            # 2) LLM 서버에 이미지 생성/전처리 요청
+            result = await llm_service.request_image_generation(prompt, image_bytes=image_bytes, filename=filename)
 
             if result["success"] and result["image_data"]:
-                # 이미지 바이너리 데이터인 경우 저장 (로컬 or GCS)
+                # 생성/전처리된 멀티뷰 이미지 저장
                 if isinstance(result["image_data"], bytes):
                     image_path = storage_service.save_image(result["image_data"])
                 else:
-                    # JSON 응답인 경우 (URL 등)
                     image_path = str(result["image_data"])
 
                 gen.image_url = image_path
                 gen.status = "image_done"
-                logger.info(f"✅ [Storage & DB] 이미지 파일 저장 완료 및 DB 업데이트 성공 (ID: {generation_id}, 파일경로: {image_path})")
+                logger.info(f"✅ [LLM] 멀티뷰 이미지 생성 완료 (ID: {generation_id}, 경로: {image_path})")
+                
+                # 3) 성공 시 다음 단계인 3D 변환 자동으로 실행 (이미지가 생성되었으므로)
+                await db.commit()
+                await _background_convert_3d(generation_id, image_path)
             else:
                 gen.status = "failed"
-                logger.error(f"이미지 생성 실패 (ID: {generation_id}): {result['error']}")
-
-            gen.updated_at = datetime.utcnow()
-            await db.commit()
+                logger.error(f"이미지 생성/전처리 실패 (ID: {generation_id}): {result['error']}")
+                gen.updated_at = datetime.utcnow()
+                await db.commit()
 
         except Exception as e:
-            logger.error(f"백그라운드 이미지 생성 오류 (ID: {generation_id}): {e}")
+            logger.error(f"백그라운드 이미지 작업 오류 (ID: {generation_id}): {e}")
             gen = await db.get(Generation, generation_id)
             if gen:
                 gen.status = "failed"
@@ -155,18 +157,12 @@ async def generate_image(
     await db.refresh(generation)
 
     if image and image.filename:
-        # 이미지 업로드: 파일 저장 후 바로 3D 변환 단계로
+        # 이미지 업로드: LLM 서버로 보내서 멀티뷰 전처리 과정을 거침
         image_bytes = await image.read()
-        ext = "." + image.filename.rsplit(".", 1)[-1].lower() if "." in image.filename else ".png"
-        image_path = storage_service.save_image(image_bytes, extension=ext)
-        generation.image_url = image_path
-        generation.status = "image_done"
-        await db.commit()
-        await db.refresh(generation)
-        logger.info(f"✅ [DB] 이미지 업로드 생성 요청 저장 완료 (작업 ID: {generation.id}, 파일: '{image.filename}', 크기: {len(image_bytes):,} bytes)")
-        background_tasks.add_task(_background_convert_3d, generation.id, image_path)
+        logger.info(f"✅ [DB] 이미지 업로드 전처리 요청 저장 완료 (작업 ID: {generation.id}, 파일: '{image.filename}')")
+        background_tasks.add_task(_background_generate_image, generation.id, prompt_text, image_bytes, image.filename)
     else:
-        # 텍스트 프롬프트: LLM으로 이미지 생성
+        # 텍스트 프롬프트: LLM으로 이미지 생성 후 멀티뷰 생성
         logger.info(f"✅ [DB] 텍스트 생성 요청 저장 완료 (작업 ID: {generation.id}, 프롬프트: '{prompt_text}')")
         background_tasks.add_task(_background_generate_image, generation.id, prompt_text)
 
